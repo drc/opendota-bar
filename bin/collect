@@ -166,12 +166,19 @@ def fetch_endpoints(account_id: str) -> dict[str, Any]:
         "wl": f"{API_BASE}/players/{account_id}/wl",
         "heroes": f"{API_BASE}/players/{account_id}/heroes",
         "matches": f"{API_BASE}/players/{account_id}/matches?limit=100",
+        "recentMatches": f"{API_BASE}/players/{account_id}/recentMatches",
     }
     results: dict[str, Any] = {}
     with ThreadPoolExecutor(max_workers=len(urls)) as pool:
         futures = {key: pool.submit(http_get_json, url) for key, url in urls.items()}
         for key, future in futures.items():
             results[key] = future.result()
+
+    matches = results.get("matches")
+    recent = results.get("recentMatches")
+    if not isinstance(matches, list) or len(matches) == 0:
+        if isinstance(recent, list) and len(recent) > 0:
+            results["matches"] = recent
     return results
 
 
@@ -355,6 +362,18 @@ def data_status(matches: list[Any], wl: Any) -> str:
     return "public"
 
 
+def synth_wl_from_matches(matches: list[dict[str, Any]]) -> dict[str, Any]:
+    win = 0
+    lose = 0
+    for match in matches:
+        won = is_radiant_win(match.get("player_slot"), match.get("radiant_win"))
+        if won is True:
+            win += 1
+        elif won is False:
+            lose += 1
+    return {"win": win, "lose": lose}
+
+
 def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, str]) -> dict[str, Any]:
     profile = endpoints.get("profile") if isinstance(endpoints.get("profile"), dict) else {}
     wl = endpoints.get("wl") if isinstance(endpoints.get("wl"), dict) else {}
@@ -364,6 +383,10 @@ def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, s
     rollups = bucket_matches(matches)
     turbo_sample = [m for m in matches if int(m.get("game_mode") or 0) in TURBO_GAME_MODES]
     streak_sample = turbo_sample if rollups["turbo"]["games"] >= 5 else matches
+
+    wl_synth = synth_wl_from_matches(matches)
+    if (int(wl.get("win") or 0) + int(wl.get("lose") or 0)) == 0 and (wl_synth["win"] + wl_synth["lose"]) > 0:
+        wl = wl_synth
 
     rank_tier = profile.get("rank_tier")
     try:
