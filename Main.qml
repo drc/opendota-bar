@@ -13,6 +13,12 @@ Item {
     return url.replace(/^file:\/\//, "").replace(/\/$/, "")
   }
 
+  readonly property string cachePath: {
+    var home = Quickshell.env("HOME") || "/root"
+    var xdg = Quickshell.env("XDG_CACHE_HOME") || (home + "/.cache")
+    return xdg + "/omarchy/opendota/record.json"
+  }
+
   property var record: null
   property bool loading: false
   property string collectError: ""
@@ -28,6 +34,22 @@ Item {
   property int summaryRefreshSec: Math.max(30, Number(setting("summaryRefreshSec", 60)))
   property bool demoMode: setting("demo", false) === true
   property string pendingKind: ""
+
+  FileView {
+    id: cacheView
+    path: root.cachePath
+    onLoaded: {
+      try {
+        var parsed = JSON.parse(String(text || ""))
+        if (parsed && typeof parsed === "object" && parsed.ready === true) {
+          root.record = parsed
+        }
+      } catch (e) {
+        console.warn("opendota", "Ignoring cached record", e)
+      }
+    }
+  }
+
   Process {
     id: collectProcess
     running: false
