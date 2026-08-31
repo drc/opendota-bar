@@ -15,15 +15,15 @@ The one-liner:
 omarchy plugin add https://github.com/drc/opendota-bar --enable
 ```
 
-That clones into `~/.config/omarchy/plugins/drc.opendota`, validates the
-manifest, and enables the plugin in the bar (it will ask which section to
-place it in).
+That clones into `~/.config/omarchy/plugins/io.github.drc.opendota`,
+validates the manifest, and enables the plugin in the bar (it will ask
+which section to place it in).
 
 Manual install:
 
 ```sh
 git clone https://github.com/drc/opendota-bar \
-  ~/.config/omarchy/plugins/drc.opendota
+  ~/.config/omarchy/plugins/io.github.drc.opendota
 ```
 
 Add your OpenDota account id to `~/.config/omarchy/agents/opendota.json`:
@@ -43,7 +43,7 @@ Enable the plugin by adding it to `~/.config/omarchy/shell.json`:
   "bar": {
     "layout": {
       "right": [
-        { "id": "drc.opendota" }
+        { "id": "io.github.drc.opendota" }
       ]
     }
   }
@@ -55,6 +55,20 @@ Restart the shell:
 ```sh
 omarchy restart shell
 ```
+
+## Removal
+
+```sh
+omarchy plugin remove io.github.drc.opendota
+```
+
+That deletes `~/.config/omarchy/plugins/io.github.drc.opendota`, calls
+`omarchy-shell shell rescanPlugins`, and removes the plugin from the
+running shell. Remove the matching entry from `~/.config/omarchy/shell.json`
+to keep your bar layout clean. The plugin leaves no files outside its
+plugin directory; the cached data at
+`~/.cache/omarchy/opendota/` survives removal and will be reused if you
+reinstall.
 
 ## Steam privacy
 
@@ -76,7 +90,7 @@ sections stay empty until you enable **Expose Public Match Data** under
 - Right-click to force a heavy refresh
 - `R` or Enter in the open panel also forces a refresh
 - `Esc` closes, arrows scroll, `Tab` jumps to the next bar widget
-- `omarchy-shell ipc call drc.opendota refresh` from a terminal works too
+- `omarchy-shell ipc call io.github.drc.opendota refresh` from a terminal works too
 
 ## Demo mode
 
@@ -85,7 +99,7 @@ without hitting OpenDota, useful for previewing the layout before your
 real data is populated:
 
 ```json
-{ "id": "drc.opendota", "demo": true }
+{ "id": "io.github.drc.opendota", "demo": true }
 ```
 
 Toggle it back to `false` (or remove the line) to use live data.

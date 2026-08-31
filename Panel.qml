@@ -8,8 +8,8 @@ import qs.Ui
 
 Panel {
   id: root
-  moduleName: "drc.opendota"
-  ipcTarget: "drc.opendota"
+  moduleName: "io.github.drc.opendota"
+  ipcTarget: "io.github.drc.opendota"
   manageIpc: false
 
   readonly property color foreground: bar ? bar.foreground : Color.foreground

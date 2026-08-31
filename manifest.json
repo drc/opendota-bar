@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "drc.opendota",
+  "id": "io.github.drc.opendota",
   "name": "OpenDota",
   "version": "1.0.0",
   "author": "drc",

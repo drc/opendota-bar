@@ -28,7 +28,6 @@ Item {
   property int summaryRefreshSec: Math.max(30, Number(setting("summaryRefreshSec", 60)))
   property bool demoMode: setting("demo", false) === true
   property string pendingKind: ""
-
   Process {
     id: collectProcess
     running: false
