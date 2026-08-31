@@ -1,0 +1,16 @@
+# Build artifacts
+*.pyc
+__pycache__/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local state (created when the plugin runs)
+.cache/
+record.json
+heroes.json
+</content>
+</invoke>
