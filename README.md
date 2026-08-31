@@ -36,6 +36,22 @@ Add your OpenDota account id to `~/.config/omarchy/agents/opendota.json`:
 
 The id is the number in your OpenDota profile URL.
 
+### Account id resolution order
+
+The collector picks the account id from the highest-priority source available:
+
+1. `--account-id` CLI flag (manual debugging)
+2. `OPENDOTA_ACCOUNT_ID` env var
+3. `accountId` field in `~/.config/omarchy/agents/opendota.json`
+4. Local Steam install — most-recently-used entry in
+   `~/.steam/steam/userdata/` or `~/.local/share/Steam/userdata/`,
+   falling back to the entry with `AutoLogin = "1"` in
+   `~/.steam/steam/config/loginusers.vdf`
+
+So if you've signed into Steam on this machine, you may not need to
+configure anything. Run `bin/collect --demo` to verify which id was
+picked.
+
 Enable the plugin by adding it to `~/.config/omarchy/shell.json`:
 
 ```json

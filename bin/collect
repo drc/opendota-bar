@@ -31,7 +31,11 @@ from pathlib import Path
 from typing import Any
 
 AGENT_ID = "opendota"
-AUTH_HELP = "Add accountId to ~/.config/omarchy/agents/opendota.json"
+AUTH_HELP = (
+  "Could not find your OpenDota account id. "
+  "Set OPENDOTA_ACCOUNT_ID, add accountId to ~/.config/omarchy/agents/opendota.json, "
+  "or sign into Steam on this machine."
+)
 API_BASE = "https://api.opendota.com/api"
 USER_AGENT = "omarchy-drc.opendota/1.0"
 HTTP_TIMEOUT = 25
@@ -131,8 +135,94 @@ def resolve_account_id(arg_value: str | None) -> str:
     if isinstance(cfg, dict):
         candidate = cfg.get("accountId")
         if candidate is not None:
-            return str(candidate).strip()
+            candidate = str(candidate).strip()
+            if candidate:
+                return candidate
+    steam_id = resolve_steam_account_id()
+    if steam_id:
+        return steam_id
     return ""
+
+
+STEAMID64_BASE = 76561197960265728
+
+
+def _steam_userdata_dirs() -> list[Path]:
+    paths: list[Path] = []
+    for root in (Path.home() / ".steam" / "steam" / "userdata",
+                 Path.home() / ".local" / "share" / "Steam" / "userdata"):
+        if root.is_dir():
+            paths.append(root)
+    return paths
+
+
+def _parse_loginusers_vdf(path: Path) -> list[tuple[int, int]]:
+    if not path.is_file():
+        return []
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    entries: list[tuple[int, int]] = []
+    current_steam64: int | None = None
+    current_timestamp: int = 0
+    current_autologin: bool = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('"') and stripped.endswith('"') and '"AccountName"' not in stripped \
+                and '"PersonaName"' not in stripped and '"RememberPassword"' not in stripped \
+                and '"WantsOfflineMode"' not in stripped and '"SkipOfflineModeWarning"' not in stripped \
+                and '"AutoLogin"' not in stripped and '"Timestamp"' not in stripped:
+            token = stripped.strip('"')
+            if token.isdigit() and len(token) >= 16:
+                current_steam64 = int(token)
+                current_timestamp = 0
+                current_autologin = False
+        elif '"AutoLogin"' in stripped:
+            parts = stripped.split('"')
+            if len(parts) >= 4 and parts[-2] == "1":
+                current_autologin = True
+        elif '"Timestamp"' in stripped:
+            parts = stripped.split('"')
+            for p in parts:
+                if p.isdigit() and len(p) >= 8:
+                    current_timestamp = int(p)
+                    break
+        if current_steam64 is not None and current_steam64 >= STEAMID64_BASE:
+            if current_autologin or current_timestamp > 0:
+                entries.append((current_timestamp, current_steam64))
+    return entries
+
+
+def resolve_steam_account_id() -> str:
+    for root in _steam_userdata_dirs():
+        try:
+            candidates = [p for p in root.iterdir() if p.is_dir() and p.name.isdigit()]
+        except OSError:
+            continue
+        if not candidates:
+            continue
+        candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        for c in candidates:
+            name = c.name
+            if len(name) >= 16:
+                steam_id = int(name) - STEAMID64_BASE
+            else:
+                steam_id = int(name)
+            if steam_id > 0:
+                return str(steam_id)
+    vdf_candidates: list[Path] = []
+    for parent in (Path.home() / ".steam" / "steam" / "config",
+                   Path.home() / ".local" / "share" / "Steam" / "config"):
+        vdf_candidates.append(parent / "loginusers.vdf")
+    entries: list[tuple[int, int]] = []
+    for path in vdf_candidates:
+        entries.extend(_parse_loginusers_vdf(path))
+    if not entries:
+        return ""
+    entries.sort(key=lambda item: item[0], reverse=True)
+    newest_timestamp, newest_steam64 = entries[0]
+    return str(newest_steam64 - STEAMID64_BASE)
 
 
 def load_heroes() -> dict[str, str]:
