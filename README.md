@@ -9,7 +9,17 @@ plugin surfaces ranked and unranked alongside for context.
 
 ## Installation
 
-Drop the plugin directory into `~/.config/omarchy/plugins/`:
+The one-liner:
+
+```sh
+omarchy plugin add https://github.com/drc/opendota-bar --enable
+```
+
+That clones into `~/.config/omarchy/plugins/drc.opendota`, validates the
+manifest, and enables the plugin in the bar (it will ask which section to
+place it in).
+
+Manual install:
 
 ```sh
 git clone https://github.com/drc/opendota-bar \
