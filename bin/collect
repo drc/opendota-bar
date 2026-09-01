@@ -250,6 +250,15 @@ def hero_name(heroes: dict[str, str], hero_id: Any) -> str:
     return heroes.get(str(hero_id), "")
 
 
+def _newest_start(matches_list: list[dict[str, Any]]) -> int:
+    latest = 0
+    for m in matches_list:
+        t = int(m.get("start_time") or 0)
+        if t > latest:
+            latest = t
+    return latest
+
+
 def fetch_endpoints(account_id: str) -> dict[str, Any]:
     urls = {
         "profile": f"{API_BASE}/players/{account_id}",
@@ -268,6 +277,9 @@ def fetch_endpoints(account_id: str) -> dict[str, Any]:
     recent = results.get("recentMatches")
     if not isinstance(matches, list) or len(matches) == 0:
         if isinstance(recent, list) and len(recent) > 0:
+            results["matches"] = recent
+    elif isinstance(matches, list) and isinstance(recent, list) and recent:
+        if _newest_start(recent) > _newest_start(matches):
             results["matches"] = recent
     return results
 
@@ -465,7 +477,8 @@ def synth_wl_from_matches(matches: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, str]) -> dict[str, Any]:
-    profile = endpoints.get("profile") if isinstance(endpoints.get("profile"), dict) else {}
+    outer = endpoints.get("profile") if isinstance(endpoints.get("profile"), dict) else {}
+    profile = outer.get("profile") if isinstance(outer.get("profile"), dict) else {}
     wl = endpoints.get("wl") if isinstance(endpoints.get("wl"), dict) else {}
     matches_raw = endpoints.get("matches")
     matches = [m for m in matches_raw if isinstance(m, dict)] if isinstance(matches_raw, list) else []
@@ -478,13 +491,13 @@ def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, s
     if (int(wl.get("win") or 0) + int(wl.get("lose") or 0)) == 0 and (wl_synth["win"] + wl_synth["lose"]) > 0:
         wl = wl_synth
 
-    rank_tier = profile.get("rank_tier")
+    rank_tier = outer.get("rank_tier")
     try:
         tier_int = int(rank_tier) if rank_tier is not None else 0
     except (TypeError, ValueError):
         tier_int = 0
     tier_name = TIER_NAMES.get(tier_int, "Unranked")
-    leaderboard = profile.get("leaderboard_rank") if tier_int == 8 else None
+    leaderboard = outer.get("leaderboard_rank") if tier_int == 8 else None
     mmr_estimate = TIER_MMR_MIDPOINTS.get(tier_int, 0)
 
     record = {
