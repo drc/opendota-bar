@@ -6,15 +6,19 @@
 
 The agents panel shows Dota 2 stats from OpenDota's public REST API.
 Everything the panel needs comes from a single record emitted by this
-script: profile + rank from /players/{id}, win/loss from /players/{id}/wl,
-per-hero stats from /players/{id}/heroes, and the 100-match history from
-/players/{id}/matches. The 100-match history is bucketed by game_mode
-and lobby_type so turbo, ranked, and unranked each get their own rollup.
+script: profile + rank from /players/{id}, all-time win/loss from
+/players/{id}/wl queried with significant=0 so unparsed matches count
+(mode splits via game_mode and lobby_type filters), per-hero stats from
+/players/{id}/heroes, and the 100-match history from /players/{id}/matches.
+The 100-match history is bucketed by game_mode and lobby_type so turbo,
+ranked, and unranked each get their own rollup; recent matches and top
+heroes use that sample while the headline and MODES rows use the
+all-time totals.
 
-A heavy refresh walks all five endpoints in parallel and writes the
-result to record.json. A summary refresh reuses the cached 100-match
-walk and only re-fetches the cheap profile and /wl endpoints. Hero
-names come from a one-shot /api/heroes lookup cached in heroes.json.
+A heavy refresh walks all endpoints in parallel and writes the result
+to record.json. A summary refresh reuses the cached 100-match walk and
+only re-fetches the cheap profile and /wl endpoints. Hero names come
+from a one-shot /api/heroes lookup cached in heroes.json.
 """
 
 from __future__ import annotations
@@ -259,10 +263,20 @@ def _newest_start(matches_list: list[dict[str, Any]]) -> int:
     return latest
 
 
+def lifetime_wl_urls(account_id: str) -> dict[str, str]:
+    base = f"{API_BASE}/players/{account_id}/wl"
+    return {
+        "wlAll": f"{base}?significant=0",
+        "wlTurbo": f"{base}?game_mode=23&significant=0",
+        "wlRanked": f"{base}?lobby_type={RANKED_LOBBY_TYPE}&significant=0",
+    }
+
+
 def fetch_endpoints(account_id: str) -> dict[str, Any]:
     urls = {
         "profile": f"{API_BASE}/players/{account_id}",
         "wl": f"{API_BASE}/players/{account_id}/wl",
+        **lifetime_wl_urls(account_id),
         "heroes": f"{API_BASE}/players/{account_id}/heroes",
         "matches": f"{API_BASE}/players/{account_id}/matches?limit=100",
         "recentMatches": f"{API_BASE}/players/{account_id}/recentMatches",
@@ -487,6 +501,39 @@ def synth_wl_from_matches(matches: list[dict[str, Any]]) -> dict[str, Any]:
     return {"win": win, "lose": lose}
 
 
+def lifetime_bucket(win: int, lose: int) -> dict[str, Any]:
+    games = win + lose
+    rate = round(100.0 * win / games, 1) if games else 0.0
+    return {"games": games, "win": win, "lose": lose, "winRate": rate}
+
+
+def lifetime_from_endpoints(endpoints: dict[str, Any]) -> dict[str, dict[str, Any]] | None:
+    def as_wl(key: str) -> dict[str, Any]:
+        value = endpoints.get(key)
+        return value if isinstance(value, dict) else {}
+
+    all_wl = as_wl("wlAll")
+    all_w = int(all_wl.get("win") or 0)
+    all_l = int(all_wl.get("lose") or 0)
+    if all_w + all_l == 0:
+        return None
+
+    turbo = as_wl("wlTurbo")
+    ranked = as_wl("wlRanked")
+    turbo_w = int(turbo.get("win") or 0)
+    turbo_l = int(turbo.get("lose") or 0)
+    ranked_w = int(ranked.get("win") or 0)
+    ranked_l = int(ranked.get("lose") or 0)
+    unranked_w = max(0, all_w - turbo_w - ranked_w)
+    unranked_l = max(0, all_l - turbo_l - ranked_l)
+    return {
+        "all": lifetime_bucket(all_w, all_l),
+        "turbo": lifetime_bucket(turbo_w, turbo_l),
+        "ranked": lifetime_bucket(ranked_w, ranked_l),
+        "unranked": lifetime_bucket(unranked_w, unranked_l),
+    }
+
+
 def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, str]) -> dict[str, Any]:
     outer = endpoints.get("profile") if isinstance(endpoints.get("profile"), dict) else {}
     profile = outer.get("profile") if isinstance(outer.get("profile"), dict) else {}
@@ -501,6 +548,10 @@ def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, s
     wl_synth = synth_wl_from_matches(matches)
     if (int(wl.get("win") or 0) + int(wl.get("lose") or 0)) == 0 and (wl_synth["win"] + wl_synth["lose"]) > 0:
         wl = wl_synth
+
+    lifetime = lifetime_from_endpoints(endpoints)
+    if lifetime is None:
+        lifetime = rollups
 
     rank_tier = outer.get("rank_tier")
     try:
@@ -527,6 +578,7 @@ def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, s
         },
         "dataStatus": data_status(matches_raw, wl),
         "modes": rollups,
+        "lifetime": lifetime,
         "recentByMode": {
             "turbo": recent_for_mode(matches, heroes, "turbo"),
             "ranked": recent_for_mode(matches, heroes, "ranked"),
@@ -606,6 +658,12 @@ def demo_record(account_id: str) -> dict[str, Any]:
             "ranked":   {"games": 124, "win": 68,  "lose": 56,  "winRate": 54.8, "kda": 2.8, "lastPlayedAt": 1725123456},
             "unranked": {"games": 88,  "win": 46,  "lose": 42,  "winRate": 52.3, "kda": 2.4, "lastPlayedAt": 1724000000},
         },
+        "lifetime": {
+            "all":      {"games": 824, "win": 432, "lose": 392, "winRate": 52.4},
+            "turbo":    {"games": 612, "win": 318, "lose": 294, "winRate": 51.9},
+            "ranked":   {"games": 124, "win": 68,  "lose": 56,  "winRate": 54.8},
+            "unranked": {"games": 88,  "win": 46,  "lose": 42,  "winRate": 52.3},
+        },
         "recentByMode": {
             "turbo": turbo_matches,
             "ranked": ranked_recent,
@@ -657,11 +715,12 @@ def main() -> int:
     if args.force or not cached:
         endpoints = fetch_endpoints(account_id)
     elif args.summary_only:
-        with ThreadPoolExecutor(max_workers=2) as pool:
+        with ThreadPoolExecutor(max_workers=4) as pool:
             profile_future = pool.submit(http_get_json, f"{API_BASE}/players/{account_id}")
-            wl_future = pool.submit(http_get_json, f"{API_BASE}/players/{account_id}/wl")
+            wl_futures = {key: pool.submit(http_get_json, url) for key, url in lifetime_wl_urls(account_id).items()}
             endpoints["profile"] = profile_future.result()
-            endpoints["wl"] = wl_future.result()
+            for key, future in wl_futures.items():
+                endpoints[key] = future.result()
         endpoints["matches"] = cached.get("__matches")
         endpoints["heroes"] = cached.get("__heroes")
     else:

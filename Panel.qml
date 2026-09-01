@@ -21,10 +21,12 @@ Panel {
 
   readonly property var record: usage.record
   readonly property var modes: record && record.modes ? record.modes : null
+  readonly property var lifetime: record && record.lifetime ? record.lifetime : null
+  readonly property var statSource: lifetime || modes
   readonly property var streak: record && record.streak ? record.streak : ({ current: 0, kind: "none" })
   readonly property string dataStatus: record ? String(record.dataStatus || "public") : "public"
 
-  readonly property string primaryMode: modes ? usage.primaryMode(modes) : "turbo"
+  readonly property string primaryMode: statSource ? usage.primaryMode(statSource) : "turbo"
   readonly property var recentPrimary: usage.recentForMode(record, primaryMode)
   readonly property var topHeroesPrimary: usage.topHeroesForMode(record, primaryMode)
 
@@ -57,9 +59,9 @@ Panel {
     var rank = record.rank ? String(record.rank.name || "") : ""
     var mmr = record.rank && record.rank.mmrEstimate ? "~" + record.rank.mmrEstimate + " MMR" : ""
     var primarySummary = ""
-    if (modes) {
+    if (statSource) {
       var primary = primaryMode
-      var pm = modes[primary]
+      var pm = statSource[primary]
       if (pm && pm.games > 0) {
         var label = usage.modeLabel(primary)
         primarySummary = pm.games + " " + label + " ("
@@ -88,18 +90,18 @@ Panel {
   }
 
   function modesHaveData() {
-    if (!modes) return false
-    var t = Number(modes.turbo && modes.turbo.games || 0)
-    var r = Number(modes.ranked && modes.ranked.games || 0)
-    var u = Number(modes.unranked && modes.unranked.games || 0)
+    if (!statSource) return false
+    var t = Number(statSource.turbo && statSource.turbo.games || 0)
+    var r = Number(statSource.ranked && statSource.ranked.games || 0)
+    var u = Number(statSource.unranked && statSource.unranked.games || 0)
     return (t + r + u) > 0
   }
 
   function modeMaxGames() {
-    if (!modes) return 1
-    var t = Number(modes.turbo && modes.turbo.games || 0)
-    var r = Number(modes.ranked && modes.ranked.games || 0)
-    var u = Number(modes.unranked && modes.unranked.games || 0)
+    if (!statSource) return 1
+    var t = Number(statSource.turbo && statSource.turbo.games || 0)
+    var r = Number(statSource.ranked && statSource.ranked.games || 0)
+    var u = Number(statSource.unranked && statSource.unranked.games || 0)
     return Math.max(1, t, r, u)
   }
 
@@ -134,8 +136,8 @@ Panel {
   readonly property bool urgentActive: {
     if (streak && streak.kind === "lose"
         && streak.current >= Number(setting("urgentStreakMin", 3))) return true
-    if (modes) {
-      var pm = modes[primaryMode]
+    if (statSource) {
+      var pm = statSource[primaryMode]
       if (pm && pm.games >= 20
           && Number(pm.winRate || 0) < Number(setting("urgentWinRatePct", 45))) return true
     }
@@ -346,9 +348,9 @@ Panel {
 
             Repeater {
               model: [
-                { id: "turbo",    data: root.modes ? root.modes.turbo    : null },
-                { id: "ranked",   data: root.modes ? root.modes.ranked   : null },
-                { id: "unranked", data: root.modes ? root.modes.unranked : null }
+                { id: "turbo",    data: root.statSource ? root.statSource.turbo    : null },
+                { id: "ranked",   data: root.statSource ? root.statSource.ranked   : null },
+                { id: "unranked", data: root.statSource ? root.statSource.unranked : null }
               ]
 
               ModeRow {
