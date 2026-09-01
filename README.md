@@ -131,6 +131,7 @@ Toggle it back to `false` (or remove the line) to use live data.
 | `topHeroesCount` | int | 5 | Top primary-mode heroes shown |
 | `urgentStreakMin` | int | 3 | Lose streak length that flags the bar urgent |
 | `urgentWinRatePct` | int | 45 | Primary-mode win rate below which the bar flags urgent (requires ≥20 games) |
+| `maxPanelHeight` | int | 900 | Max panel height in px; always clamped to available screen space, so values larger than the screen simply use the full space |
 | `demo` | bool | false | Emit synthetic demo data |
 
 ## Primary mode

@@ -26,6 +26,7 @@
       "topHeroesCount": 5,
       "urgentStreakMin": 3,
       "urgentWinRatePct": 45,
+      "maxPanelHeight": 900,
       "demo": false
     },
     "schema": [
@@ -35,7 +36,8 @@
       {"key": "recentMatchesCount", "type": "integer", "label": "Recent matches shown", "min": 5, "max": 20, "step": 1, "defaultValue": 10},
       {"key": "topHeroesCount", "type": "integer", "label": "Top heroes shown", "min": 3, "max": 10, "step": 1, "defaultValue": 5},
       {"key": "urgentStreakMin", "type": "integer", "label": "Lose streak to flag urgent", "min": 2, "max": 10, "step": 1, "defaultValue": 3},
-      {"key": "urgentWinRatePct", "type": "integer", "label": "Win rate % to flag urgent (turbo)", "min": 20, "max": 80, "step": 1, "defaultValue": 45},
+      {"key": "urgentWinRatePct", "type": "integer", "label": "Win rate % to flag urgent (primary mode)", "min": 20, "max": 80, "step": 1, "defaultValue": 45},
+      {"key": "maxPanelHeight", "type": "integer", "label": "Max panel height (px, clamped to screen)", "min": 400, "max": 2400, "step": 20, "defaultValue": 900},
       {"key": "demo", "type": "bool", "label": "Show synthetic demo data (preview only)", "defaultValue": false}
     ]
   }
