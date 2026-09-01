@@ -540,6 +540,7 @@ def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, s
         "streak": compute_streak(matches, streak_sample),
         "lastMatchAt": last_match_at(matches),
         "updatedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "updatedAtMs": int(dt.datetime.now(dt.timezone.utc).timestamp() * 1000),
     }
     return record
 
@@ -618,6 +619,7 @@ def demo_record(account_id: str) -> dict[str, Any]:
         "streak": {"current": 3, "kind": "win"},
         "lastMatchAt": turbo_matches[0]["startedAt"],
         "updatedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "updatedAtMs": now_ms,
         "_demo": True,
     }
 

@@ -74,7 +74,13 @@ Panel {
   }
 
   function footerText() {
-    if (!record || !record.updatedAt) return ""
+    if (!record) return ""
+    if (record.updatedAtMs) {
+      var msAge = Math.max(0, root.nowMs - Number(record.updatedAtMs))
+      var mins = Math.round(msAge / 60000)
+      return mins === 0 ? "Updated just now" : "Updated " + mins + " min ago"
+    }
+    if (!record.updatedAt) return ""
     var updated = new Date(String(record.updatedAt))
     if (isNaN(updated.getTime())) return ""
     var minutes = Math.max(0, Math.round((root.nowMs - updated.getTime()) / 60000))
@@ -294,6 +300,15 @@ Panel {
                 }
               }
             }
+          }
+
+          Text {
+            visible: text !== ""
+            width: parent.width
+            text: root.footerText()
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
           }
 
           BorderSurface {
