@@ -7,6 +7,8 @@ current streak, recent turbo matches, and top turbo heroes. Turbo is the
 headline queue because that's where most players spend their time, but the
 plugin surfaces ranked and unranked alongside for context.
 
+![OpenDota panel preview](preview.png)
+
 ## Installation
 
 The one-liner:
