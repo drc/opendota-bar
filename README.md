@@ -124,13 +124,26 @@ Toggle it back to `false` (or remove the line) to use live data.
 
 | key | type | default | meaning |
 |-----|------|---------|---------|
+| `accountId` | string | `""` | OpenDota account id. Empty = use the precedence order above (CLI > env > config > Steam auto-detect) |
 | `refreshIntervalSec` | int | 600 | Heavy refresh interval (seconds) |
 | `summaryRefreshSec` | int | 60 | Light refresh interval (seconds) |
-| `recentMatchesCount` | int | 10 | Recent turbo matches shown |
-| `topHeroesCount` | int | 5 | Top turbo heroes shown |
+| `recentMatchesCount` | int | 10 | Recent primary-mode matches shown |
+| `topHeroesCount` | int | 5 | Top primary-mode heroes shown |
 | `urgentStreakMin` | int | 3 | Lose streak length that flags the bar urgent |
-| `urgentWinRatePct` | int | 45 | Turbo win rate below which the bar flags urgent (requires ≥20 games) |
+| `urgentWinRatePct` | int | 45 | Primary-mode win rate below which the bar flags urgent (requires ≥20 games) |
 | `demo` | bool | false | Emit synthetic demo data |
+
+## Primary mode
+
+The collector buckets matches into three modes — turbo, ranked, and
+unranked — based on `game_mode` and `lobby_type`. The panel picks the
+**primary mode** dynamically as whichever has the most games in the
+sample: that mode drives the hero meta summary, the highlighted row in
+the MODES breakdown, the recent-matches section, the top-heroes
+section, and the urgent-win-rate threshold. For a primarily-turbo
+player the panel reads as "612 Turbo (51.9%)" with turbo highlighted;
+for a primarily-ranked player the same UI reads as "418 Ranked
+(54.8%)" with ranked highlighted.
 
 ## Layout
 

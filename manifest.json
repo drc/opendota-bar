@@ -19,6 +19,7 @@
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
+      "accountId": "",
       "refreshIntervalSec": 600,
       "summaryRefreshSec": 60,
       "recentMatchesCount": 10,
@@ -28,6 +29,7 @@
       "demo": false
     },
     "schema": [
+      {"key": "accountId", "type": "string", "label": "OpenDota account id (overrides Steam auto-detect)", "placeholder": "83730627"},
       {"key": "refreshIntervalSec", "type": "integer", "label": "Full refresh (seconds)", "min": 60, "max": 3600, "step": 60, "defaultValue": 600},
       {"key": "summaryRefreshSec", "type": "integer", "label": "Light refresh (seconds)", "min": 30, "max": 600, "step": 30, "defaultValue": 60},
       {"key": "recentMatchesCount", "type": "integer", "label": "Recent matches shown", "min": 5, "max": 20, "step": 1, "defaultValue": 10},

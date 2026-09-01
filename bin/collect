@@ -390,34 +390,28 @@ def compute_streak(matches: list[dict[str, Any]], sample: list[dict[str, Any]]) 
     return {"current": length, "kind": kind}
 
 
-def turbo_top_heroes(matches: list[dict[str, Any]], heroes: dict[str, str]) -> list[dict[str, Any]]:
-    counts: dict[str, dict[str, int]] = {}
+def matches_for_mode(matches: list[dict[str, Any]], mode_id: str) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
     for match in matches:
         if not isinstance(match, dict):
             continue
-        if int(match.get("game_mode") or 0) not in TURBO_GAME_MODES:
-            continue
-        hero_id = match.get("hero_id")
-        if hero_id is None:
-            continue
-        bucket = counts.setdefault(str(hero_id), {"games": 0, "win": 0})
-        bucket["games"] += 1
-        if is_radiant_win(match.get("player_slot"), match.get("radiant_win")):
-            bucket["win"] += 1
-    ranked = sorted(counts.items(), key=lambda item: (-item[1]["games"], item[0]))[:5]
-    return [
-        {"heroId": int(hero_id), "name": hero_name(heroes, hero_id), "games": bucket["games"], "win": bucket["win"]}
-        for hero_id, bucket in ranked
-    ]
+        game_mode = int(match.get("game_mode") or 0)
+        lobby_type = int(match.get("lobby_type") or 0)
+        if mode_id == "turbo":
+            if game_mode in TURBO_GAME_MODES:
+                out.append(match)
+        elif mode_id == "ranked":
+            if lobby_type == RANKED_LOBBY_TYPE:
+                out.append(match)
+        else:
+            if game_mode not in TURBO_GAME_MODES and lobby_type != RANKED_LOBBY_TYPE:
+                out.append(match)
+    return out
 
 
-def recent_turbo(matches: list[dict[str, Any]], heroes: dict[str, str], limit: int = 10) -> list[dict[str, Any]]:
+def recent_for_mode(matches: list[dict[str, Any]], heroes: dict[str, str], mode_id: str, limit: int = 10) -> list[dict[str, Any]]:
     recent: list[dict[str, Any]] = []
-    for match in matches:
-        if not isinstance(match, dict):
-            continue
-        if int(match.get("game_mode") or 0) not in TURBO_GAME_MODES:
-            continue
+    for match in matches_for_mode(matches, mode_id):
         won = is_radiant_win(match.get("player_slot"), match.get("radiant_win"))
         if won is None:
             continue
@@ -436,6 +430,23 @@ def recent_turbo(matches: list[dict[str, Any]], heroes: dict[str, str], limit: i
         if len(recent) >= limit:
             break
     return recent
+
+
+def top_heroes_for_mode(matches: list[dict[str, Any]], heroes: dict[str, str], mode_id: str, limit: int = 5) -> list[dict[str, Any]]:
+    counts: dict[str, dict[str, int]] = {}
+    for match in matches_for_mode(matches, mode_id):
+        hero_id = match.get("hero_id")
+        if hero_id is None:
+            continue
+        bucket = counts.setdefault(str(hero_id), {"games": 0, "win": 0})
+        bucket["games"] += 1
+        if is_radiant_win(match.get("player_slot"), match.get("radiant_win")):
+            bucket["win"] += 1
+    ranked = sorted(counts.items(), key=lambda item: (-item[1]["games"], item[0]))[:limit]
+    return [
+        {"heroId": int(hero_id), "name": hero_name(heroes, hero_id), "games": bucket["games"], "win": bucket["win"]}
+        for hero_id, bucket in ranked
+    ]
 
 
 def last_match_at(matches: list[dict[str, Any]]) -> int:
@@ -484,8 +495,8 @@ def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, s
     matches = [m for m in matches_raw if isinstance(m, dict)] if isinstance(matches_raw, list) else []
 
     rollups = bucket_matches(matches)
-    turbo_sample = [m for m in matches if int(m.get("game_mode") or 0) in TURBO_GAME_MODES]
-    streak_sample = turbo_sample if rollups["turbo"]["games"] >= 5 else matches
+    streak_mode = "turbo" if rollups["turbo"]["games"] >= 5 else "all"
+    streak_sample = matches_for_mode(matches, streak_mode) if streak_mode != "all" else matches
 
     wl_synth = synth_wl_from_matches(matches)
     if (int(wl.get("win") or 0) + int(wl.get("lose") or 0)) == 0 and (wl_synth["win"] + wl_synth["lose"]) > 0:
@@ -516,8 +527,16 @@ def build_record(account_id: str, endpoints: dict[str, Any], heroes: dict[str, s
         },
         "dataStatus": data_status(matches_raw, wl),
         "modes": rollups,
-        "topHeroesTurbo": turbo_top_heroes(matches, heroes),
-        "recentTurbo": recent_turbo(matches, heroes),
+        "recentByMode": {
+            "turbo": recent_for_mode(matches, heroes, "turbo"),
+            "ranked": recent_for_mode(matches, heroes, "ranked"),
+            "unranked": recent_for_mode(matches, heroes, "unranked"),
+        },
+        "topHeroesByMode": {
+            "turbo": top_heroes_for_mode(matches, heroes, "turbo"),
+            "ranked": top_heroes_for_mode(matches, heroes, "ranked"),
+            "unranked": top_heroes_for_mode(matches, heroes, "unranked"),
+        },
         "streak": compute_streak(matches, streak_sample),
         "lastMatchAt": last_match_at(matches),
         "updatedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -547,6 +566,24 @@ def demo_record(account_id: str) -> dict[str, Any]:
         {"heroId": 64,  "name": "Jakiro",         "games": 41, "win": 24},
         {"heroId": 7,   "name": "Earthshaker",    "games": 38, "win": 21},
     ]
+    ranked_recent = [
+        {"matchId": "8900000001", "heroId": 74, "heroName": "Invoker", "won": True,  "kills": 14, "deaths": 6, "assists": 11, "duration": 2510, "startedAt": (now_ms - 18 * 3600 * 1000) // 1000},
+        {"matchId": "8900000002", "heroId": 8,  "heroName": "Juggernaut","won": True, "kills": 11, "deaths": 4, "assists": 8,  "duration": 2230, "startedAt": (now_ms - 2 * one_day * 1000) // 1000},
+        {"matchId": "8900000003", "heroId": 14, "heroName": "Pudge",   "won": False, "kills": 5,  "deaths": 9, "assists": 13, "duration": 1980, "startedAt": (now_ms - 3 * one_day * 1000) // 1000},
+    ]
+    ranked_top = [
+        {"heroId": 74, "name": "Invoker", "games": 42, "win": 24},
+        {"heroId": 8,  "name": "Juggernaut","games": 31, "win": 17},
+        {"heroId": 14, "name": "Pudge",   "games": 28, "win": 16},
+    ]
+    unranked_recent = [
+        {"matchId": "8800000001", "heroId": 87, "heroName": "Disruptor", "won": True,  "kills": 7,  "deaths": 5, "assists": 18, "duration": 1640, "startedAt": (now_ms - 30 * 3600 * 1000) // 1000},
+        {"matchId": "8800000002", "heroId": 11, "heroName": "Shadow Fiend","won": False, "kills": 9, "deaths": 8, "assists": 6, "duration": 1820, "startedAt": (now_ms - 4 * one_day * 1000) // 1000},
+    ]
+    unranked_top = [
+        {"heroId": 87, "name": "Disruptor", "games": 22, "win": 12},
+        {"heroId": 11, "name": "Shadow Fiend", "games": 18, "win": 9},
+    ]
     return {
         "ready": True,
         "accountId": account_id,
@@ -568,8 +605,16 @@ def demo_record(account_id: str) -> dict[str, Any]:
             "ranked":   {"games": 124, "win": 68,  "lose": 56,  "winRate": 54.8, "kda": 2.8, "lastPlayedAt": 1725123456},
             "unranked": {"games": 88,  "win": 46,  "lose": 42,  "winRate": 52.3, "kda": 2.4, "lastPlayedAt": 1724000000},
         },
-        "topHeroesTurbo": top_heroes,
-        "recentTurbo": turbo_matches,
+        "recentByMode": {
+            "turbo": turbo_matches,
+            "ranked": ranked_recent,
+            "unranked": unranked_recent,
+        },
+        "topHeroesByMode": {
+            "turbo": top_heroes,
+            "ranked": ranked_top,
+            "unranked": unranked_top,
+        },
         "streak": {"current": 3, "kind": "win"},
         "lastMatchAt": turbo_matches[0]["startedAt"],
         "updatedAt": dt.datetime.now(dt.timezone.utc).isoformat(),

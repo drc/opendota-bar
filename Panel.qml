@@ -22,9 +22,11 @@ Panel {
   readonly property var record: usage.record
   readonly property var modes: record && record.modes ? record.modes : null
   readonly property var streak: record && record.streak ? record.streak : ({ current: 0, kind: "none" })
-  readonly property var recentTurbo: record && record.recentTurbo ? record.recentTurbo : []
-  readonly property var topHeroesTurbo: record && record.topHeroesTurbo ? record.topHeroesTurbo : []
   readonly property string dataStatus: record ? String(record.dataStatus || "public") : "public"
+
+  readonly property string primaryMode: modes ? usage.primaryMode(modes) : "turbo"
+  readonly property var recentPrimary: usage.recentForMode(record, primaryMode)
+  readonly property var topHeroesPrimary: usage.topHeroesForMode(record, primaryMode)
 
   property bool cursorActive: false
   property double nowMs: Date.now()
@@ -54,15 +56,20 @@ Panel {
     if (!record) return ""
     var rank = record.rank ? String(record.rank.name || "") : ""
     var mmr = record.rank && record.rank.mmrEstimate ? "~" + record.rank.mmrEstimate + " MMR" : ""
-    var turboSummary = ""
-    if (modes && modes.turbo && modes.turbo.games > 0) {
-      turboSummary = modes.turbo.games + " turbo ("
-        + formatWinRate(modes.turbo.winRate) + ")"
+    var primarySummary = ""
+    if (modes) {
+      var primary = primaryMode
+      var pm = modes[primary]
+      if (pm && pm.games > 0) {
+        var label = usage.modeLabel(primary)
+        primarySummary = pm.games + " " + label + " ("
+          + formatWinRate(pm.winRate) + ")"
+      }
     }
     var parts = []
     if (rank !== "") parts.push(rank)
     if (mmr !== "") parts.push(mmr)
-    if (turboSummary !== "") parts.push(turboSummary)
+    if (primarySummary !== "") parts.push(primarySummary)
     return parts.join(" · ")
   }
 
@@ -92,8 +99,8 @@ Panel {
 
   function topHeroesPeak() {
     var peak = 0
-    for (var i = 0; i < topHeroesTurbo.length; i++) {
-      peak = Math.max(peak, Number(topHeroesTurbo[i].games || 0))
+    for (var i = 0; i < topHeroesPrimary.length; i++) {
+      peak = Math.max(peak, Number(topHeroesPrimary[i].games || 0))
     }
     return Math.max(1, peak)
   }
@@ -121,17 +128,20 @@ Panel {
   readonly property bool urgentActive: {
     if (streak && streak.kind === "lose"
         && streak.current >= Number(setting("urgentStreakMin", 3))) return true
-    if (modes && modes.turbo && modes.turbo.games >= 20
-        && Number(modes.turbo.winRate || 0) < Number(setting("urgentWinRatePct", 45))) return true
+    if (modes) {
+      var pm = modes[primaryMode]
+      if (pm && pm.games >= 20
+          && Number(pm.winRate || 0) < Number(setting("urgentWinRatePct", 45))) return true
+    }
     return false
   }
 
   readonly property int recentLimit: Math.max(1, Number(setting("recentMatchesCount", 10)))
   readonly property int topHeroesLimit: Math.max(1, Number(setting("topHeroesCount", 5)))
-  readonly property int recentCount: Math.min(recentTurbo.length, recentLimit)
-  readonly property int topHeroesCountShown: Math.min(topHeroesTurbo.length, topHeroesLimit)
-  readonly property var recentSliced: recentTurbo.slice(0, recentCount)
-  readonly property var topHeroesSliced: topHeroesTurbo.slice(0, topHeroesCountShown)
+  readonly property int recentCount: Math.min(recentPrimary.length, recentLimit)
+  readonly property int topHeroesCountShown: Math.min(topHeroesPrimary.length, topHeroesLimit)
+  readonly property var recentSliced: recentPrimary.slice(0, recentCount)
+  readonly property var topHeroesSliced: topHeroesPrimary.slice(0, topHeroesCountShown)
 
   visible: !!record && record.ready === true
   implicitWidth: button.implicitWidth

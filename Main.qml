@@ -83,6 +83,8 @@ Item {
     if (kind === "force") command.push("--force")
     if (kind === "summary") command.push("--summary-only")
     if (root.demoMode) command.push("--demo")
+    var overrideId = String(setting("accountId", "") || "").trim()
+    if (overrideId !== "") command.push("--account-id", overrideId)
     loading = true
     collectProcess.command = command
     collectProcess.running = true
@@ -127,6 +129,33 @@ Item {
     if (mode === "unranked") return "Unranked"
     if (mode === "all") return "All modes"
     return String(mode || "")
+  }
+
+  function primaryMode(modes) {
+    if (!modes) return "turbo"
+    var candidates = [
+      { id: "turbo", n: Number(modes.turbo && modes.turbo.games || 0) },
+      { id: "ranked", n: Number(modes.ranked && modes.ranked.games || 0) },
+      { id: "unranked", n: Number(modes.unranked && modes.unranked.games || 0) }
+    ]
+    candidates.sort(function(a, b) { return b.n - a.n })
+    return candidates[0].n > 0 ? candidates[0].id : "turbo"
+  }
+
+  function recentForMode(record, modeId) {
+    if (!record) return []
+    var byMode = record.recentByMode
+    if (byMode && Array.isArray(byMode[modeId])) return byMode[modeId]
+    if (modeId === "turbo" && Array.isArray(record.recentTurbo)) return record.recentTurbo
+    return []
+  }
+
+  function topHeroesForMode(record, modeId) {
+    if (!record) return []
+    var byMode = record.topHeroesByMode
+    if (byMode && Array.isArray(byMode[modeId])) return byMode[modeId]
+    if (modeId === "turbo" && Array.isArray(record.topHeroesTurbo)) return record.topHeroesTurbo
+    return []
   }
 
   function formatKda(k, d, a) {
