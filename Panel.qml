@@ -302,15 +302,6 @@ Panel {
             }
           }
 
-          Text {
-            visible: text !== ""
-            width: parent.width
-            text: root.footerText()
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-          }
-
           BorderSurface {
             visible: root.dataStatus === "private"
             width: parent.width
