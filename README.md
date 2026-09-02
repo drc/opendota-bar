@@ -168,5 +168,3 @@ with or endorsed by Valve.
 ## License
 
 MIT
-</content>
-</invoke>
