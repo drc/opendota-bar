@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.drc.opendota",
   "name": "OpenDota",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "drc",
   "license": "MIT",
   "description": "Dota 2 stats from OpenDota: rank, recent turbo matches, top heroes, in the Omarchy bar.",
