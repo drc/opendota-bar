@@ -84,6 +84,13 @@ class CollectorTest(unittest.TestCase):
             path.write_bytes(b"x" * (collect.MAX_CACHE_BYTES + 1))
             self.assertIsNone(collect.load_cached(path))
 
+    def test_cache_ttl_requires_matching_account(self):
+        now_ms = 1_000_000
+        cached = {"accountId": "42", "__fetchedAtMs": now_ms}
+        self.assertTrue(collect.cache_is_fresh(cached, "42", now_ms))
+        self.assertFalse(collect.cache_is_fresh(cached, "43", now_ms))
+        self.assertFalse(collect.cache_is_fresh(cached, "42", now_ms + collect.AUTO_REFRESH_TTL_SEC * 1000))
+
 
 if __name__ == "__main__":
     unittest.main()

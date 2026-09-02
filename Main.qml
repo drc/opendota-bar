@@ -30,8 +30,7 @@ Item {
     return value === undefined || value === null ? fallback : value
   }
 
-  property int refreshIntervalSec: Math.max(60, Number(setting("refreshIntervalSec", 600)))
-  property int summaryRefreshSec: Math.max(30, Number(setting("summaryRefreshSec", 60)))
+  property int refreshIntervalSec: Math.max(3600, Number(setting("refreshIntervalSec", 21600)))
   property bool demoMode: setting("demo", false) === true
   property string pendingKind: ""
 
@@ -114,13 +113,6 @@ Item {
     repeat: true
     triggeredOnStart: true
     onTriggered: root.collect("normal")
-  }
-
-  Timer {
-    interval: root.summaryRefreshSec * 1000
-    running: true
-    repeat: true
-    onTriggered: root.collect("summary")
   }
 
   function modeLabel(mode) {

@@ -45,6 +45,7 @@ AUTH_HELP = (
 API_BASE = "https://api.opendota.com/api"
 USER_AGENT = "omarchy-drc.opendota/1.0"
 HTTP_TIMEOUT = 25
+AUTO_REFRESH_TTL_SEC = 6 * 60 * 60
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_CACHE_BYTES = 4 * 1024 * 1024
 
@@ -734,6 +735,17 @@ def unconfigured_record() -> dict[str, Any]:
     }
 
 
+def safe_record(record: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in record.items() if not key.startswith("__")}
+
+
+def cache_is_fresh(cached: dict[str, Any], account_id: str, now_ms: int) -> bool:
+    if cached.get("accountId") != account_id:
+        return False
+    fetched_at_ms = safe_int(cached.get("__fetchedAtMs"))
+    return fetched_at_ms > 0 and now_ms - fetched_at_ms < AUTO_REFRESH_TTL_SEC * 1000
+
+
 def _run() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="walk all endpoints and rewrite the record")
@@ -751,9 +763,14 @@ def _run() -> int:
         print(json.dumps(demo_record(account_id), separators=(",", ":")))
         return 0
 
-    heroes = load_heroes()
     cached = load_cached(record_path())
     cached = cached if isinstance(cached, dict) else {}
+    now_ms = int(dt.datetime.now(dt.timezone.utc).timestamp() * 1000)
+    if not args.force and cache_is_fresh(cached, account_id, now_ms):
+        print(json.dumps(safe_record(cached), separators=(",", ":")))
+        return 0
+
+    heroes = load_heroes()
 
     endpoints: dict[str, Any] = {}
     if args.force or not cached or cached.get("accountId") != account_id:
@@ -775,14 +792,14 @@ def _run() -> int:
 
     record = build_record(account_id, endpoints, heroes)
     cache_payload = dict(record)
+    cache_payload["__fetchedAtMs"] = now_ms
     if isinstance(matches_for_cache, list):
         cache_payload["__matches"] = matches_for_cache
     if isinstance(heroes_for_cache, list):
         cache_payload["__heroes"] = heroes_for_cache
     write_json(record_path(), cache_payload)
 
-    safe_record = {key: value for key, value in record.items() if not key.startswith("__")}
-    print(json.dumps(safe_record, separators=(",", ":")))
+    print(json.dumps(safe_record(record), separators=(",", ":")))
     return 0
 
 

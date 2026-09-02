@@ -20,8 +20,7 @@
     "defaultSection": "right",
     "defaults": {
       "accountId": "",
-      "refreshIntervalSec": 600,
-      "summaryRefreshSec": 60,
+      "refreshIntervalSec": 21600,
       "recentMatchesCount": 10,
       "topHeroesCount": 5,
       "urgentStreakMin": 3,
@@ -31,8 +30,7 @@
     },
     "schema": [
       {"key": "accountId", "type": "string", "label": "OpenDota account id (overrides Steam auto-detect)", "placeholder": "83730627"},
-      {"key": "refreshIntervalSec", "type": "integer", "label": "Full refresh (seconds)", "min": 60, "max": 3600, "step": 60, "defaultValue": 600},
-      {"key": "summaryRefreshSec", "type": "integer", "label": "Light refresh (seconds)", "min": 30, "max": 600, "step": 30, "defaultValue": 60},
+      {"key": "refreshIntervalSec", "type": "integer", "label": "Automatic refresh (seconds)", "min": 3600, "max": 86400, "step": 3600, "defaultValue": 21600},
       {"key": "recentMatchesCount", "type": "integer", "label": "Recent matches shown", "min": 5, "max": 20, "step": 1, "defaultValue": 10},
       {"key": "topHeroesCount", "type": "integer", "label": "Top heroes shown", "min": 3, "max": 10, "step": 1, "defaultValue": 5},
       {"key": "urgentStreakMin", "type": "integer", "label": "Lose streak to flag urgent", "min": 2, "max": 10, "step": 1, "defaultValue": 3},

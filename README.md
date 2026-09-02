@@ -97,10 +97,12 @@ sections stay empty until you enable **Expose Public Match Data** under
 
 ## Refresh cadence
 
-- Heavy refresh (default 10 min): walks the 100-match history and rebuilds
-  per-mode buckets, top heroes, streak. Editable in the settings panel.
-- Light refresh (default 60 s, when the panel opens): only refetches the
-  profile and aggregate W/L, reuses cached match buckets.
+- Automatic refresh (default 6 hours): walks the 100-match history and
+  rebuilds per-mode buckets, top heroes, and streak. Editable in the settings
+  panel.
+- Opening the panel uses the cached record and does not contact OpenDota.
+- Right-clicking the icon, pressing `R` or Enter, or using the IPC refresh
+  command forces an immediate refresh.
 
 ## Interaction
 
@@ -127,8 +129,7 @@ Toggle it back to `false` (or remove the line) to use live data.
 | key | type | default | meaning |
 |-----|------|---------|---------|
 | `accountId` | string | `""` | OpenDota account id. Empty = use the precedence order above (CLI > env > config > Steam auto-detect) |
-| `refreshIntervalSec` | int | 600 | Heavy refresh interval (seconds) |
-| `summaryRefreshSec` | int | 60 | Light refresh interval (seconds) |
+| `refreshIntervalSec` | int | 21600 | Automatic refresh interval (seconds) |
 | `recentMatchesCount` | int | 10 | Recent primary-mode matches shown |
 | `topHeroesCount` | int | 5 | Top primary-mode heroes shown |
 | `urgentStreakMin` | int | 3 | Lose streak length that flags the bar urgent |

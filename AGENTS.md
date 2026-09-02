@@ -10,7 +10,7 @@ renders them in the status bar.
   marketplace-registered identifier; the directory name in
   `~/.config/omarchy/plugins/` must match.
 - `Main.qml` — data layer. Spawns `bin/collect` as a subprocess, owns
-  the two refresh timers, parses the JSON record. Reads
+  the automatic refresh timer, parses the JSON record. Reads
   `~/.cache/omarchy/opendota/record.json` via `FileView` on startup
   so the bar icon appears immediately rather than waiting for the
   first network refresh.
